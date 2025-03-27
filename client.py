@@ -38,7 +38,6 @@ def send_photos(file_path, ip_address, port):
     with socket.socket() as s:
         s.connect((ip_address, port))
 
-
         if os.path.isfile(file_path):
             s.send(os.path.basename(file_path).encode())
             with open(file_path, "rb") as file:
@@ -65,8 +64,6 @@ def main():
     for file_path in photo_paths:
         response_data = send_photos(file_path, ip_address, port)
     response_data = json.loads(response_data)
-
-
 
     print("Ответ от сервера:", response_data)
 

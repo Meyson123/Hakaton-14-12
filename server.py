@@ -2,6 +2,7 @@ import socket
 import cv2
 import numpy as np
 import os
+import struct
 
 COLORS = {
     'красный': ([0, 150, 100], [10, 255, 255]),
@@ -9,6 +10,7 @@ COLORS = {
     'синий': ([100, 150, 50], [140, 255, 255]),
     'желтый': ([20, 100, 100], [40, 255, 255])
 }
+
 
 def start_server():
     """Запуск сервера для приема изображений."""
@@ -22,21 +24,26 @@ def start_server():
         print("Подключен к: " + str(address))
 
         # Получаем имя файла
-        file_name = conn.recv(1024).decode()
-        print(f"Получаем файл: {file_name}")
+        files = conn.recv(1024).decode()
+        file_names = files.split(',')
+        print(f"Получены имена файлов: {file_names}")
 
         # Записываем полученный файл
-        with open(file_name, "wb") as file:
-            print("Начинаем запись файла...")
-            while True:
-                data = conn.recv(1024)
-                if not data:
-                    break  # Если нет данных, выходим из цикла
-                file.write(data)  # Записываем данные в файл
-
-        print("Файл успешно получен!")
-        results = process_image(file_name)  # Обрабатываем изображение на наличие цветов
-        print(results)
+        for file_name in file_names:
+            file_size_data = conn.recv(4)
+            file_size = struct.unpack('!I', file_size_data)[0]
+            print(f"Получаем файл: {file_name} размером {file_size} байт")
+            with open(file_name, "wb") as file:
+                bytes_received = 0
+                while bytes_received < file_size:
+                    data = conn.recv(1024)
+                    if not data:
+                        break
+                    file.write(data)
+                    bytes_received += len(data)
+                print(f"Файл {file_name} успешно получен!")
+                results = process_image(file_name)  # Обрабатываем изображение на наличие цветов
+                print(results)
 
         # Отправляем результаты обратно клиенту
         conn.sendall(str(results).encode())
@@ -71,6 +78,7 @@ def process_frame(frame):
 
     return detected
 
+
 def process_image(file_name):
     """Обрабатывает изображение и возвращает результаты обнаружения цветов"""
     results = {}
@@ -84,6 +92,7 @@ def process_image(file_name):
     results['detected'] = detected  # Сохраняем результаты обнаружения
 
     return results
+
 
 if __name__ == '__main__':
     start_server()  # Запускаем сервер
